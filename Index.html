@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Birthday Escape — Lighted Labyrinth (6 Rooms)</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --text:#e8ecff;
+      --muted:#aeb8ff;
+      --accent:#7cf7d4;
+      --accent2:#ffdf6e;
+      --danger:#ff6e8a;
+      --ok:#57f287;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% 10%, #1a2a66 0%, rgba(26,42,102,0) 60%),
+        radial-gradient(900px 600px at 85% 20%, #3b1b5b 0%, rgba(59,27,91,0) 55%),
+        linear-gradient(180deg, #070a14 0%, var(--bg) 55%, #070a14 100%);
+      min-height:100vh;
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      background: linear-gradient(135deg, rgba(124,247,212,.25), rgba(255,223,110,.25));
+      border:1px solid rgba(255,255,255,.12);
+      display:grid;place-items:center;
+      box-shadow: var(--shadow);
+      font-size:22px;
+    }
+    h1{margin:0;font-size:20px;letter-spacing:.2px}
+    .sub{color:var(--muted);font-size:13px;margin-top:2px}
+    .btnrow{display:flex;gap:10px;flex-wrap:wrap}
+    button{
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.14);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      transition: transform .06s ease, background .2s ease, border .2s ease;
+      box-shadow: 0 10px 20px rgba(0,0,0,.15);
+      font-weight:600;
+    }
+    button:hover{transform: translateY(-1px); background: rgba(255,255,255,.09)}
+    button.primary{
+      background: linear-gradient(135deg, rgba(124,247,212,.22), rgba(124,247,212,.08));
+      border-color: rgba(124,247,212,.45);
+    }
+    button.warn{
+      background: linear-gradient(135deg, rgba(255,110,138,.20), rgba(255,110,138,.08));
+      border-color: rgba(255,110,138,.45);
+    }
+
+    .grid{display:grid;grid-template-columns: 1.2fr .8fr;gap:16px;margin-top:18px;}
+    @media (max-width: 900px){ .grid{grid-template-columns: 1fr;} }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:16px 16px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.00));
+    }
+    .card .bd{padding:16px}
+    .small{font-size:13px;color:var(--muted);line-height:1.35}
+    .mono{font-family: var(--mono)}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 10px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      font-size:12px;color:var(--muted)
+    }
+    .statusDot{width:8px;height:8px;border-radius:50%}
+    .dotLocked{background: var(--danger)}
+    .dotOpen{background: var(--accent2)}
+    .dotSolved{background: var(--ok)}
+
+    .map{
+      position:relative;
+      height:520px;
+      background:
+        radial-gradient(600px 300px at 30% 20%, rgba(124,247,212,.15), rgba(0,0,0,0) 60%),
+        radial-gradient(500px 280px at 70% 75%, rgba(255,223,110,.14), rgba(0,0,0,0) 60%),
+        linear-gradient(180deg, rgba(15,23,48,.85), rgba(11,16,32,.85));
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.12);
+      overflow:hidden;
+    }
+    .map::before{
+      content:"";
+      position:absolute; inset:0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+      background-size: 42px 42px;
+      opacity:.25;
+      pointer-events:none;
+    prove;
+    }
+    svg.lines{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; opacity:.85;}
+
+    .node{
+      position:absolute;
+      width:155px; height:94px;
+      border-radius: 18px;
+      display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+      padding:12px; gap:6px;
+      cursor:pointer; user-select:none;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.20);
+      box-shadow: 0 14px 30px rgba(0,0,0,.25);
+      transition: transform .08s ease, opacity .2s ease;
+    }
+    .node:hover{transform: translateY(-2px)}
+    .node.locked{opacity:.55; cursor:not-allowed; filter:saturate(.8)}
+    .nodeTitle{font-weight:800;font-size:13px}
+    .nodeSub{font-size:12px;color:var(--muted)}
+    .nodeTag{
+      font-size:11px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color:var(--muted);
+      align-self:flex-start;
+    }
+
+    .roomTitle{font-size:18px;font-weight:900;margin:0 0 10px}
+    .puzzle{
+      background: rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding:14px;
+      line-height:1.45;
+    }
+    .puzzle code{
+      font-family: var(--mono);
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      padding:2px 6px;
+      border-radius: 8px;
+    }
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+    input[type="text"]{
+      flex:1; min-width: 230px;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color:var(--text);
+      outline:none;
+      font-family: var(--mono);
+    }
+    input[type="text"]:focus{border-color: rgba(124,247,212,.55)}
+    .msg{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+    }
+    .msg.ok{border-color: rgba(87,242,135,.45); color: rgba(200,255,220,.95); background: rgba(87,242,135,.08)}
+    .msg.bad{border-color: rgba(255,110,138,.45); color: rgba(255,205,215,.95); background: rgba(255,110,138,.08)}
+    details{
+      margin-top:12px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding:10px 12px;
+    }
+    details summary{cursor:pointer;font-weight:800;color:var(--accent2)}
+
+    .frags{display:flex; flex-direction:column; gap:10px; margin-top:12px;}
+    .frag{
+      padding:12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.20);
+    }
+    .frag .label{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .frag .text{font-family:var(--mono); font-weight:900; letter-spacing:.6px}
+
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      color: rgba(235,240,255,.92);
+      font-family: var(--mono);
+      font-weight:900;
+      letter-spacing:.4px;
+    }
+    .chip.lock{opacity:.55; color:var(--muted)}
+    .footerNote{margin-top:12px;font-size:12px;color:rgba(255,255,255,.55)}
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">🗝️</div>
+      <div>
+        <h1>Birthday Escape — The Lighted Labyrinth</h1>
+        <div class="sub">6 rooms. Collect scrambled fragments. Then assemble the final sentence.</div>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="primary" id="btnMap">Map</button>
+      <button id="btnRoom">Room</button>
+      <button id="btnFinal">Final</button>
+      <button class="warn" id="btnReset" title="Reset progress on this device">Reset</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="hd">
+        <div class="pill">
+          <span class="statusDot dotOpen" id="pillDot"></span>
+          <span id="progressText">Progress: 0 / 6 solved</span>
+        </div>
+      </div>
+      <div class="bd" id="main"></div>
+    </div>
+
+    <div class="card">
+      <div class="hd">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-weight:900">Collected Fragments (unordered)</div>
+          <div class="small">These are intentionally not in sentence order.</div>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="small">Word Bank (shuffled but stable):</div>
+        <div class="chips" id="bank"></div>
+        <div class="footerNote">
+          If you changed puzzles and answers, hit <b>Reset</b> once to clear old saved progress.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /**********************
+   * CONFIG
+   **********************/
+  const FINAL_MESSAGE = "WE ARE GOING TOGETHER TO PARIS AND DISNEYLAND THIS WEEKEND";
+
+  // NOTE: Fragments are intentionally scrambled across rooms.
+  const ROOMS = [
+    {
+      id: "room1",
+      title: "Room 1 — The Dwarfs’ Shift",
+      tag: "Caesar Cipher",
+      pos: { x: 60, y: 85 },
+      next: ["room2"],
+      puzzleHTML: `
+        <div class="puzzle">
+          <div><b>Step 1:</b> The key is the number of dwarfs in the classic tale.</div>
+          <div class="small" style="margin-top:6px">
+            Use that number as a Caesar shift: move every letter <b>BACK</b> by the key.
+          </div>
+          <div style="margin-top:10px"><b>Decode:</b></div>
+          <div class="mono" style="font-weight:900;letter-spacing:.9px;margin-top:6px">
+            DL HYL
+          </div>
+        </div>
+      `,
+      hintHTML: `The key is 7. Shift each letter back 7.`,
+      validate: (input) => norm(input) === norm("WE ARE") || norm(input) === norm("WEARE"),
+      fragment: "WE ARE"
+    },
+
+    {
+      id: "room2",
+      title: "Room 2 — Roller-Coaster Rails",
+      tag: "Rail Fence Cipher",
+      pos: { x: 275, y: 235 },
+      next: ["room5"],
+      puzzleHTML: `
+        <div class="puzzle">
+          <div><b>Rail Fence Cipher:</b> Write the message in a zigzag on <b>3 rails</b>, then read row by row.</div>
+          <div class="small" style="margin-top:6px">
+            To decode, reconstruct the zigzag pattern (3 rails), fill letters row-wise, then read the zigzag.
+          </div>
+          <div style="margin-top:10px"><b>Ciphertext:</b></div>
+          <div class="mono" style="font-weight:900;letter-spacing:.9px;margin-top:6px">
+            TWEHSEKNIED
+          </div>
+        </div>
+      `,
+      hintHTML: `It decodes to two words. For 11 letters on a 3-rail zigzag, the rails take 3 / 5 / 3 letters.
+
+Rail 1 pattern: •---•---•   → 3 spots (positions 1, 5, 9)
+Rail 2 pattern: -•-•-•-•-•- → 5 spots (positions 2, 4, 6, 8, 10)
+Rail 3 pattern: --•---•---• → 3 spots (positions 3, 7, 11)
+
+Method:
+1) Draw the 3-rail zigzag for 11 characters.
+2) Put the first 3 ciphertext letters on Rail 1, next 5 on Rail 2, last 3 on Rail 3.
+3) Read back by following the zigzag path to recover the plaintext.`,
+
+      validate: (input) => norm(input) === norm("THIS WEEKEND") || norm(input) === norm("THISWEEKEND"),
+      fragment: "THIS WEEKEND"
+    },
+
+    {
+      id: "room3",
+      title: "Room 3 — Mirror + One Step",
+      tag: "Two-Step Cipher",
+      pos: { x: 495, y: 360 },
+      next: ["room4"],
+      puzzleHTML: `
+        <div class="puzzle">
+          <div><b>Decode in two steps:</b></div>
+          <div style="margin-top:8px">
+            <b>Step A:</b> Shift every letter <b>BACK by 1</b> (Caesar -1).<br>
+            <b>Step B:</b> Apply <b>Atbash</b> (A↔Z, B↔Y, C↔X, ...).
+          </div>
+          <div style="margin-top:10px"><b>Ciphertext:</b></div>
+          <div class="mono" style="font-weight:900;letter-spacing:1px;margin-top:6px">
+            LAJSI
+          </div>
+        </div>
+      `,
+      hintHTML: `After Caesar -1, do the mirror alphabet. You should get a 5-letter destination.`,
+      validate: (input) => norm(input) === norm("PARIS"),
+      fragment: "PARIS"
+    },
+
+    {
+      id: "room4",
+      title: "Room 4 — The Diagonal Castle",
+      tag: "Diagonal Extraction",
+      pos: { x: 705, y: 120 },
+      next: ["final"],
+      puzzleHTML: `
+        <div class="puzzle">
+          <div><b>Instruction:</b></div>
+          <div style="margin-top:6px">
+            1) Read the <b>main diagonal</b> (top-left → bottom-right).<br>
+            2) Then <b>reverse</b> what you got to reveal the place-name.
+          </div>
+
+          <pre class="mono" style="margin-top:12px;font-weight:900;letter-spacing:.6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:12px;overflow:auto">
+D D A X I H H E X D
+V N R C S N B A C G
+H Q A A R G W U W R
+N H O L I Z A Y Z F
+W N K I Y G Y K D C
+M D L L T E Z B X O
+R D M C R J N T L S
+G W C B V H Y S C H
+D M I O U L F L I G
+V I W V U C T U F D
+          </pre>
+        </div>
+      `,
+      hintHTML: `Diagonal first gives a backwards-looking word. Reverse it to get the theme park name.`,
+      validate: (input) => norm(input) === norm("DISNEYLAND"),
+      fragment: "AND DISNEYLAND"
+    },
+
+    {
+      id: "room5",
+      title: "Room 5 — The Spiral Ticket",
+      tag: "Spiral Read",
+      pos: { x: 845, y: 320 },
+      next: ["room6"],
+      puzzleHTML: `
+        <div class="puzzle">
+          <div><b>Instruction:</b> Start at the top-left and read a <b>clockwise spiral</b> inward.</div>
+          <div class="small" style="margin-top:6px">
+            Ignore any <code>X</code> padding at the end.
+          </div>
+
+          <pre class="mono" style="margin-top:12px;font-weight:900;letter-spacing:.9px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:12px;overflow:auto">
+G O I N
+E R X G
+H X X T
+T E G O
+          </pre>
+        </div>
+      `,
+      hintHTML: `Spiral order (4×4): across the top, down the right side, across the bottom backwards, up the left side, then inner loop.`,
+      validate: (input) => norm(input) === norm("GOING TOGETHER") || norm(input) === norm("GOINGTOGETHER"),
+      fragment: "GOING TOGETHER"
+    },
+
+    {
+      id: "room6",
+      title: "Room 6 — The Binary Gate",
+      tag: "ASCII Decode",
+      pos: { x: 505, y: 70 },
+      next: ["room3"],
+      puzzleHTML: `
+        <div class="puzzle">
+          <div><b>Instruction:</b> Convert each 8-bit binary chunk into an ASCII uppercase letter.</div>
+          <div class="small" style="margin-top:6px">
+            Example: binary → decimal → ASCII letter.
+          </div>
+
+          <div style="margin-top:12px"><b>Binary:</b></div>
+          <div class="mono" style="font-weight:900;letter-spacing:1px;margin-top:6px">
+            01010100 01001111
+          </div>
+        </div>
+      `,
+      hintHTML: `01010100 = 84 and 01001111 = 79 in decimal. Convert those to ASCII letters.`,
+      validate: (input) => norm(input) === norm("TO"),
+      fragment: "TO"
+    },
+  ];
+
+  /**********************
+   * STATE
+   **********************/
+  const STORAGE_KEY = "lighted_labyrinth_6rooms_v1";
+  const defaultState = { view: "map", currentRoom: "room1", solved: {}, fragments: {}, seed: null };
+
+  let state = loadState();
+  if(!state.seed){
+    state.seed = Math.floor(Math.random() * 1e9);
+    saveState();
+  }
+
+  /**********************
+   * HELPERS
+   **********************/
+  const alphaNumSpace = /[^A-Z0-9]+/g;
+  function norm(s){
+    return (s || "")
+      .toUpperCase()
+      .replace(alphaNumSpace, " ")
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return structuredClone(defaultState);
+      const parsed = JSON.parse(raw);
+      return { ...structuredClone(defaultState), ...parsed };
+    }catch(e){
+      return structuredClone(defaultState);
+    }
+  }
+
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function solvedCount(){
+    return Object.values(state.solved).filter(Boolean).length;
+  }
+
+  function isUnlocked(roomId){
+    if(roomId === "room1") return true;
+    for(const r of ROOMS){
+      if((r.next || []).includes(roomId) && state.solved[r.id]) return true;
+    }
+    return false;
+  }
+
+  function setView(v, roomId){
+    state.view = v;
+    if(roomId) state.currentRoom = roomId;
+    saveState();
+    render();
+  }
+
+  // stable RNG for consistent shuffle
+  function mulberry32(a){
+    return function(){
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+  }
+  function stableShuffle(arr, seed){
+    const rng = mulberry32(seed);
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(rng() * (i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, (m)=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[m]));
+  }
+
+  /**********************
+   * RENDER
+   **********************/
+  const main = document.getElementById("main");
+  const progressText = document.getElementById("progressText");
+  const pillDot = document.getElementById("pillDot");
+  const bankEl = document.getElementById("bank");
+
+  function render(){
+    const sc = solvedCount();
+    progressText.textContent = `Progress: ${sc} / ${ROOMS.length} solved`;
+    pillDot.className = "statusDot " + (sc === ROOMS.length ? "dotSolved" : sc > 0 ? "dotOpen" : "dotLocked");
+
+    renderBank();
+
+    if(state.view === "map") renderMap();
+    else if(state.view === "room") renderRoom(state.currentRoom);
+    else renderFinal();
+  }
+
+  function renderBank(){
+    // Show all fragments as a shuffled word bank, but locked ones are hidden.
+    const fragmentsInRoomOrder = ROOMS.map(r => ({
+      id: r.id,
+      text: state.solved[r.id] ? r.fragment : null
+    }));
+
+    const shuffled = stableShuffle(fragmentsInRoomOrder, state.seed);
+    bankEl.innerHTML = "";
+    for(const item of shuffled){
+      const chip = document.createElement("div");
+      chip.className = "chip " + (item.text ? "" : "lock");
+      chip.textContent = item.text ? item.text : "LOCKED";
+      bankEl.appendChild(chip);
+    }
+  }
+
+  function renderMap(){
+    const nodes = ROOMS.map(r => {
+      const solved = !!state.solved[r.id];
+      const unlocked = isUnlocked(r.id);
+      const cls = ["node"];
+      if(!unlocked) cls.push("locked");
+      const tag = solved ? "Solved" : unlocked ? "Unlocked" : "Locked";
+      const dot = solved ? "🟢" : unlocked ? "🟡" : "🔴";
+      return `
+        <div class="${cls.join(" ")}" style="left:${r.pos.x}px; top:${r.pos.y}px" data-room="${r.id}">
+          <div class="nodeTitle">${dot} ${escapeHtml(r.title.replace("Room ", ""))}</div>
+          <div class="nodeSub">${escapeHtml(r.tag)}</div>
+          <div class="nodeTag">${tag}</div>
+        </div>
+      `;
+    }).join("");
+
+    const lineSvg = `
+      <svg class="lines" viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true">
+        ${drawLine("room1","room2")}
+        ${drawLine("room2","room5")}
+        ${drawLine("room5","room6")}
+        ${drawLine("room6","room3")}
+        ${drawLine("room3","room4")}
+      </svg>
+    `;
+
+    main.innerHTML = `
+      <div class="roomTitle">Labyrinth Map</div>
+      <div class="small">Solve rooms to collect fragments. They are scrambled on purpose.</div>
+      <div style="margin-top:12px" class="map">
+        ${lineSvg}
+        ${nodes}
+      </div>
+      <div class="msg" style="margin-top:12px">
+        After all rooms are solved, go to <b>Final</b> and assemble the sentence to unlock the reveal.
+      </div>
+    `;
+
+    document.querySelectorAll(".node").forEach(el => {
+      el.addEventListener("click", () => {
+        const roomId = el.getAttribute("data-room");
+        if(!isUnlocked(roomId)) return;
+        setView("room", roomId);
+      });
+    });
+  }
+
+  function drawLine(aId,bId){
+    const a = ROOMS.find(r=>r.id===aId).pos;
+    const b = ROOMS.find(r=>r.id===bId).pos;
+    const ax = a.x + 77, ay = a.y + 47;
+    const bx = b.x + 77, by = b.y + 47;
+    return `<path d="M ${ax} ${ay} C ${(ax+bx)/2} ${ay}, ${(ax+bx)/2} ${by}, ${bx} ${by}"
+      fill="none" stroke="rgba(124,247,212,.55)" stroke-width="3" stroke-linecap="round" />`;
+  }
+
+  function renderRoom(roomId){
+    const r = ROOMS.find(x=>x.id===roomId);
+    if(!r) return renderMap();
+    if(!isUnlocked(roomId)) { setView("map"); return; }
+
+    const solved = !!state.solved[r.id];
+
+    main.innerHTML = `
+      <div class="roomTitle">${escapeHtml(r.title)}</div>
+      <div class="small">Solve the puzzle, then type the answer to unlock the next room.</div>
+
+      <div style="margin-top:12px">${r.puzzleHTML}</div>
+
+      <div class="row">
+        <input id="answer" type="text" placeholder="Type your answer…" ${solved ? "disabled" : ""} />
+        <button class="primary" id="checkBtn" ${solved ? "disabled" : ""}>Check</button>
+        <button id="hintBtn">Hint</button>
+      </div>
+
+      <div id="feedback" class="msg" style="display:none"></div>
+
+      <details id="hintBox" style="display:none">
+        <summary>Hint</summary>
+        <div class="small" style="margin-top:8px">${escapeHtml(r.hintHTML)}</div>
+      </details>
+
+      <div style="margin-top:14px" class="row">
+        <button id="backMap">← Back to Map</button>
+        <button id="goFinal">Go to Final →</button>
+      </div>
+    `;
+
+    const answer = document.getElementById("answer");
+    const feedback = document.getElementById("feedback");
+    const hintBtn = document.getElementById("hintBtn");
+    const hintBox = document.getElementById("hintBox");
+
+    if(solved){
+      feedback.style.display = "block";
+      feedback.className = "msg ok";
+      feedback.innerHTML = `✅ Already solved. Fragment collected: <span class="mono"><b>${escapeHtml(state.fragments[r.id])}</b></span>`;
+    } else {
+      answer.addEventListener("keydown", (e)=>{ if(e.key==="Enter") check(); });
+      document.getElementById("checkBtn").addEventListener("click", check);
+    }
+
+    hintBtn.addEventListener("click", ()=>{
+      hintBox.style.display = hintBox.style.display === "none" ? "block" : "none";
+      hintBox.open = hintBox.style.display !== "none";
+    });
+
+    document.getElementById("backMap").addEventListener("click", ()=>setView("map"));
+    document.getElementById("goFinal").addEventListener("click", ()=>setView("final"));
+
+    function check(){
+      const val = answer.value || "";
+      if(r.validate(val)){
+        state.solved[r.id] = true;
+        state.fragments[r.id] = r.fragment;
+        saveState();
+
+        feedback.style.display = "block";
+        feedback.className = "msg ok";
+        feedback.textContent = "✅ Correct! Next room unlocked and fragment collected.";
+
+        renderBank();
+
+        setTimeout(()=>{
+          const nextId = (r.next && r.next[0]) || "final";
+          if(nextId === "final") setView("final");
+          else setView("room", nextId);
+        }, 650);
+      } else {
+        feedback.style.display = "block";
+        feedback.className = "msg bad";
+        feedback.textContent = "❌ Not quite. Re-check the extraction rule/cipher steps and try again.";
+      }
+    }
+  }
+
+  function renderFinal(){
+    const sc = solvedCount();
+    const allSolved = sc === ROOMS.length;
+
+    const collected = ROOMS
+      .filter(r => state.solved[r.id])
+      .map(r => r.fragment);
+
+    const shuffledBank = stableShuffle(
+      ROOMS.map(r => state.solved[r.id] ? r.fragment : "LOCKED"),
+      state.seed
+    );
+
+    main.innerHTML = `
+      <div class="roomTitle">Final Chamber</div>
+      <div class="small">All fragments are intentionally scrambled. Assemble the final sentence yourself.</div>
+
+      <div class="msg" style="margin-top:12px">
+        <div style="font-weight:900;margin-bottom:6px">Word Bank (shuffled):</div>
+        <div class="mono" style="font-weight:900;letter-spacing:.6px">${escapeHtml(shuffledBank.join(" | "))}</div>
+      </div>
+
+      <div class="msg ${allSolved ? "" : ""}" style="margin-top:12px">
+        ${
+          allSolved
+          ? `<div style="font-weight:900;margin-bottom:6px">✅ All fragments collected.</div>
+             <div class="small">Now type the full sentence in the correct order to unlock the reveal:</div>
+             <div class="row" style="margin-top:10px">
+               <input id="finalInput" type="text" placeholder="Type the full sentence here…" />
+               <button class="primary" id="finalCheck">Unlock</button>
+             </div>
+             <div id="finalFeedback" class="msg" style="display:none"></div>`
+          : `<div style="font-weight:900;margin-bottom:6px">🔒 Not ready yet.</div>
+             <div class="small">Solve all 6 rooms first.</div>`
+        }
+      </div>
+
+      <div style="margin-top:14px" class="row">
+        <button id="backMap2">← Back to Map</button>
+        <button id="goRoom2" class="primary">Continue →</button>
+      </div>
+    `;
+
+    document.getElementById("backMap2").addEventListener("click", ()=>setView("map"));
+    document.getElementById("goRoom2").addEventListener("click", ()=>{
+      const next = ROOMS.find(r => !state.solved[r.id] && isUnlocked(r.id)) || ROOMS[0];
+      setView("room", next.id);
+    });
+
+    if(allSolved){
+      const finalInput = document.getElementById("finalInput");
+      const finalCheck = document.getElementById("finalCheck");
+      const finalFeedback = document.getElementById("finalFeedback");
+
+      finalInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") doFinal(); });
+      finalCheck.addEventListener("click", doFinal);
+
+      function doFinal(){
+        const attempt = norm(finalInput.value);
+        if(attempt === norm(FINAL_MESSAGE)){
+          finalFeedback.style.display = "block";
+          finalFeedback.className = "msg ok";
+          finalFeedback.innerHTML = `
+            🎉 <b>UNLOCKED!</b><br><br>
+            <span class="mono" style="font-weight:900;font-size:16px;letter-spacing:.7px">
+              ${escapeHtml(FINAL_MESSAGE)}
+            </span>
+          `;
+        } else {
+          finalFeedback.style.display = "block";
+          finalFeedback.className = "msg bad";
+          finalFeedback.textContent = "Not quite. Use the word bank and check the order carefully.";
+        }
+      }
+    }
+  }
+
+  /**********************
+   * NAV BUTTONS
+   **********************/
+  document.getElementById("btnMap").addEventListener("click", ()=>setView("map"));
+  document.getElementById("btnRoom").addEventListener("click", ()=>setView("room", state.currentRoom));
+  document.getElementById("btnFinal").addEventListener("click", ()=>setView("final"));
+  document.getElementById("btnReset").addEventListener("click", ()=>{
+    localStorage.removeItem(STORAGE_KEY);
+    state = loadState();
+    if(!state.seed){
+      state.seed = Math.floor(Math.random() * 1e9);
+      saveState();
+    }
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
